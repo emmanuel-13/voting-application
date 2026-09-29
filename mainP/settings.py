@@ -110,26 +110,26 @@ DATABASES = {
 # }
 
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#             "hosts": [
-#                 {
-#                     "host": "127.0.0.1",
-#                     "port": 6379,
-#                     "protocol": 2,
-#                 }
-#             ],
-#         },
-#     },
-# }
-
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                {
+                    "host": "127.0.0.1",
+                    "port": 6379,
+                    "protocol": 2,
+                }
+            ],
+        },
     },
 }
+
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
+#     },
+# }
 
 
 # Password validation
@@ -165,11 +165,11 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'admin_static'
-STATICFILES_DIRS = BASE_DIR / "static"
+# STATIC_ROOT = BASE_DIR / 'admin_static'
+# STATICFILES_DIRS = BASE_DIR / "static"
 
 
 # Email
