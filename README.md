@@ -18,6 +18,7 @@ Google Sheets is the raw form-response store in this design. Django does not cur
 ## Technology
 
 - Python 3.13 and Django
+- Django's built-in user authentication for dashboard accounts
 - Django Channels and Daphne for ASGI/WebSocket support
 - SQLite for vote storage
 - Google Forms and a linked Google Sheet as the voting form and response log
@@ -34,7 +35,8 @@ Google Sheets is the raw form-response store in this design. Django does not cur
 |-- manage.py
 |-- mainP/                 # Django project settings, URLs, ASGI routing
 |-- firstPage/             # Vote model, webhook view, and Channels consumers
-|-- template/main/home.html # Real-time dashboard
+|-- template/main/account.html # Combined login and registration page
+|-- template/main/home.html    # Authenticated real-time dashboard
 |-- requirements.txt
 `-- README.md
 ```
@@ -77,6 +79,12 @@ python manage.py check
 ```
 
 The development server and in-memory Channels layer are for local development, not production.
+
+## User accounts
+
+The dashboard requires an account. Opening `/` while signed out redirects to `/account/`, where the **Log in** and **Create account** tabs share one page. Registration asks for a username, email address, and password; a successful registration signs the user in and opens the dashboard. Returning users log in with their username and password. The dashboard profile menu displays the signed-in username and provides a CSRF-protected logout action. The account page and dashboard share a light/dark theme preference saved in the browser.
+
+The dashboard WebSocket at `/ws/votes/` also rejects unauthenticated connections. The Google Apps Script webhook at `/google/` remains separate from user sessions so the Google trigger can submit votes; secure that endpoint before public production use.
 
 ## Configure Google Forms, Sheets, and Apps Script
 

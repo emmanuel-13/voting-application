@@ -20,14 +20,116 @@
             --shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
         }
 
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #111916;
+            --panel: #1b2520;
+            --primary: #fa8069;
+            --primary-soft: rgba(250, 128, 105, 0.16);
+            --text: #edf4ef;
+            --muted: #adbbb2;
+            --border: #344239;
+            --shadow: 0 20px 45px rgba(0, 0, 0, 0.28);
+        }
+
         * { box-sizing: border-box; }
 
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #eef4ff 0%, #f7f8ff 45%, #f3f7fb 100%);
+            background: var(--bg);
             color: var(--text);
-            padding: 32px 20px;
+            padding: 0 20px 32px;
+        }
+
+        .site-nav {
+            min-height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: #d34b32;
+            color: #fff;
+            font: 700 20px Georgia, serif;
+        }
+
+        .brand-copy { display: grid; gap: 2px; }
+        .brand-copy strong { font-size: 14px; }
+        .brand-copy span { color: var(--muted); font-size: 10px; letter-spacing: 1.2px; }
+
+        .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+        .nav-icon-button, .profile-button {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            background: var(--panel);
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .nav-icon-button svg, .profile-button svg { width: 19px; height: 19px; }
+
+        .profile-menu { position: relative; }
+
+        .profile-button {
+            border: 0;
+            background: #315c43;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            z-index: 5;
+            top: calc(100% + 10px);
+            right: 0;
+            width: 220px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel);
+            box-shadow: var(--shadow);
+        }
+
+        .profile-dropdown[hidden] { display: none; }
+        .profile-name { overflow: hidden; padding: 9px 10px 12px; color: var(--muted); font-size: 13px; text-overflow: ellipsis; }
+        .logout-button { width: 100%; padding: 10px; border: 0; border-radius: 5px; background: var(--primary-soft); color: var(--text); text-align: left; font: inherit; font-weight: 650; cursor: pointer; }
+
+        :root[data-theme="dark"] body { background-image: radial-gradient(rgba(164, 196, 174, 0.08) 0.7px, transparent 0.7px); background-size: 18px 18px; }
+        :root[data-theme="dark"] .container { background: var(--panel); border-color: var(--border); }
+        :root[data-theme="dark"] .kpi-card, :root[data-theme="dark"] .chart-card { background: #202c26; }
+        :root[data-theme="dark"] .filters { background: #202c26; }
+        :root[data-theme="dark"] .pill-group { background: #111916; }
+        :root[data-theme="dark"] .status { background: #293b30; color: #c6e6d0; border-color: #476653; }
+        :root[data-theme="dark"] select { background: var(--panel); color: var(--text); }
+
+        .nav-icon-button:focus-visible, .profile-button:focus-visible, .logout-button:focus-visible {
+            outline: 3px solid var(--primary-soft);
+            outline-offset: 2px;
         }
 
         .container {
@@ -220,13 +322,55 @@
         }
 
         @media (max-width: 600px) {
+            body { padding: 0 12px 20px; }
+            .site-nav { min-height: 64px; }
+            .brand-copy span { font-size: 9px; }
             .container { padding: 18px; }
             .kpi-grid { grid-template-columns: 1fr; }
             .topbar, .filters, .chart-header { align-items: flex-start; }
         }
+
+        @media (max-width: 360px) {
+            .site-nav { gap: 8px; }
+            .brand-link { gap: 8px; }
+            .brand-mark { width: 32px; height: 32px; }
+            .brand-copy strong { font-size: 12px; }
+            .brand-copy span { font-size: 8px; letter-spacing: 1px; }
+            .nav-actions { gap: 6px; }
+            .nav-icon-button, .profile-button { width: 36px; height: 36px; }
+            .filters { padding: 12px; }
+            .filters .filter-group { width: 100%; min-width: 0; }
+            .filters select { width: 100%; min-width: 0; }
+            .pill-group { max-width: 100%; flex-wrap: wrap; }
+            .filter-btn { padding: 8px 10px; }
+        }
     </style>
 </head>
 <body>
+    <nav class="site-nav" aria-label="Main navigation">
+        <a class="brand-link" href="{% url 'home' %}" aria-label="EmmySolution Media Dynamics home">
+            <span class="brand-mark" aria-hidden="true">E</span>
+            <span class="brand-copy"><strong>EmmySolution</strong><span>MEDIA DYNAMICS</span></span>
+        </a>
+        <div class="nav-actions">
+            <button class="nav-icon-button" id="theme-toggle" type="button" aria-label="Switch to dark mode" title="Toggle theme">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A8.5 8.5 0 0 1 11 3.1 8.5 8.5 0 1 0 20.9 13Z"/></svg>
+            </button>
+            <div class="profile-menu">
+                <button class="profile-button" id="profile-toggle" type="button" aria-label="Open profile menu" aria-expanded="false" aria-controls="profile-dropdown">
+                    {{ request.user.username|first|upper }}
+                </button>
+                <div class="profile-dropdown" id="profile-dropdown" hidden>
+                    <div class="profile-name">Signed in as <strong>{{ request.user.username }}</strong></div>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button class="logout-button" type="submit">Log out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="topbar">
             <h1>Real-Time Voting Dashboard</h1>
@@ -443,7 +587,39 @@
             });
         });
 
-        const socket = new WebSocket('ws://localhost:8000/ws/votes/');
+        const socketProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socket = new WebSocket(`${socketProtocol}//${window.location.host}/ws/votes/`);
+
+        const root = document.documentElement;
+        const themeButton = document.getElementById('theme-toggle');
+        const themeIcon = themeButton.querySelector('svg');
+
+        function setTheme(theme) {
+            root.dataset.theme = theme;
+            const dark = theme === 'dark';
+            themeButton.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+            themeIcon.innerHTML = dark
+                ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>'
+                : '<path d="M20.9 13A8.5 8.5 0 0 1 11 3.1 8.5 8.5 0 1 0 20.9 13Z"/>';
+            try { localStorage.setItem('emmy-theme', theme); } catch (error) { }
+        }
+
+        themeButton.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+        setTheme(root.dataset.theme || 'light');
+
+        const profileToggle = document.getElementById('profile-toggle');
+        const profileDropdown = document.getElementById('profile-dropdown');
+        profileToggle.addEventListener('click', () => {
+            const isOpen = profileToggle.getAttribute('aria-expanded') === 'true';
+            profileToggle.setAttribute('aria-expanded', String(!isOpen));
+            profileDropdown.hidden = isOpen;
+        });
+        document.addEventListener('click', event => {
+            if (!event.target.closest('.profile-menu')) {
+                profileToggle.setAttribute('aria-expanded', 'false');
+                profileDropdown.hidden = true;
+            }
+        });
 
         socket.onopen = function () {
             console.log('Connection established');

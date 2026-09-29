@@ -131,6 +131,11 @@ class VoteConsumer(AsyncWebsocketConsumer):
 class VoteConsumer2(AsyncWebsocketConsumer):
 
     async def connect(self):
+        user = self.scope.get("user")
+        if user is None or not user.is_authenticated:
+            await self.close(code=4401)
+            return
+
         self.group_name = "vote_results"
 
         await self.channel_layer.group_add(

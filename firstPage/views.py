@@ -1,6 +1,50 @@
-from django.shortcuts import render # pyright: ignore[reportMissingModuleSource]
+from django import forms
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.shortcuts import redirect, render # pyright: ignore[reportMissingModuleSource]
+from django.views.decorators.http import require_POST
 
-# Create your views here.
+class RegistrationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+
+    class Meta(UserCreationForm.Meta):
+        fields = ("username", "email")
+
+
+def account(request):
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    login_form = AuthenticationForm(request=request)
+    registration_form = RegistrationForm()
+
+    if request.method == "POST":
+        if request.POST.get("form_type") == "register":
+            registration_form = RegistrationForm(request.POST)
+            if registration_form.is_valid():
+                user = registration_form.save()
+                login(request, user)
+                return redirect("home")
+        else:
+            login_form = AuthenticationForm(request=request, data=request.POST)
+            if login_form.is_valid():
+                login(request, login_form.get_user())
+                return redirect("home")
+
+    return render(request, "main/account.html", {
+        "login_form": login_form,
+        "registration_form": registration_form,
+    })
+
+
+@require_POST
+def logout_view(request):
+    logout(request)
+    return redirect("account")
+
+
+@login_required(login_url="account")
 def home(request):
     return render(request, 'main/home.html')
 

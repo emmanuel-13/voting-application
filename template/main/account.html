@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Welcome | EmmySolution Media Dynamics</title>
+    <script>
+        try {
+            document.documentElement.dataset.theme = localStorage.getItem('emmy-theme') || 'light';
+        } catch (error) {
+            document.documentElement.dataset.theme = 'light';
+        }
+    </script>
+    <style>
+        :root {
+            color-scheme: light;
+            --page: #f2f5f2;
+            --surface: #ffffff;
+            --ink: #182520;
+            --muted: #68776f;
+            --line: #dce5df;
+            --accent: #d34b32;
+            --accent-dark: #ae3925;
+            --focus: rgba(211, 75, 50, 0.18);
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --page: #111916;
+            --surface: #1b2520;
+            --ink: #edf4ef;
+            --muted: #adbbb2;
+            --line: #344239;
+            --accent: #fa8069;
+            --accent-dark: #ff9c88;
+            --focus: rgba(250, 128, 105, 0.2);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--ink);
+            background-color: var(--page);
+            background-image: radial-gradient(rgba(49, 92, 67, 0.12) 0.7px, transparent 0.7px);
+            background-size: 18px 18px;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        .auth-nav {
+            height: 76px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 clamp(20px, 6vw, 88px);
+            border-bottom: 1px solid var(--line);
+            background: var(--surface);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--ink);
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: var(--accent);
+            color: white;
+            font-family: Georgia, serif;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .brand-name { display: grid; gap: 2px; }
+        .brand-name strong { font-size: 14px; }
+        .brand-name span { color: var(--muted); font-size: 10px; letter-spacing: 1.2px; }
+
+        .icon-button {
+            width: 40px;
+            height: 40px;
+            display: grid;
+            place-items: center;
+            border: 1px solid var(--line);
+            border-radius: 50%;
+            background: var(--surface);
+            color: var(--ink);
+            cursor: pointer;
+        }
+
+        .icon-button svg { width: 19px; height: 19px; }
+
+        .auth-layout {
+            min-height: calc(100vh - 76px);
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
+            align-items: center;
+            gap: clamp(40px, 8vw, 120px);
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 64px 28px;
+        }
+
+        .intro { max-width: 540px; }
+        .eyebrow { color: var(--accent-dark); font-size: 12px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; }
+        .intro h1 { margin: 18px 0; font: 500 clamp(42px, 5vw, 66px)/1.05 Georgia, serif; letter-spacing: 0; }
+        .intro p { max-width: 420px; color: var(--muted); font-size: 16px; line-height: 1.7; }
+        .intro-rule { width: 64px; height: 4px; margin-top: 34px; background: var(--accent); }
+
+        .auth-panel {
+            padding: 30px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface);
+            box-shadow: 0 18px 60px rgba(25, 43, 33, 0.1);
+        }
+
+        .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--page); border-radius: 6px; }
+        .tab { min-height: 42px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: inherit; font-weight: 650; cursor: pointer; }
+        .tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 5px rgba(25, 43, 33, 0.1); }
+        .form-panel[hidden] { display: none; }
+        .form-panel h2 { margin: 24px 0 6px; font: 500 28px Georgia, serif; }
+        .form-hint { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+        .field { margin: 16px 0; }
+        .field label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 650; }
+        .field input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); font: inherit; }
+        .field input:focus { border-color: var(--accent); outline: 3px solid var(--focus); }
+        .field-errors, .form-errors { color: #bd382d; font-size: 13px; }
+        .field-errors { margin: 6px 0 0; padding-left: 18px; }
+        .form-errors { margin: 12px 0; padding: 10px 12px; border-left: 3px solid #bd382d; background: rgba(189, 56, 45, 0.08); }
+        .submit-button { width: 100%; min-height: 48px; margin-top: 8px; border: 0; border-radius: 5px; background: var(--accent); color: white; font: inherit; font-weight: 700; cursor: pointer; }
+        .submit-button:hover { background: var(--accent-dark); }
+        .submit-button:focus-visible, .tab:focus-visible, .icon-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+        @media (max-width: 760px) {
+            .auth-layout { grid-template-columns: 1fr; gap: 32px; max-width: 520px; padding-top: 42px; }
+            .intro h1 { font-size: 46px; }
+            .intro p { margin-bottom: 0; }
+        }
+
+        @media (max-width: 440px) {
+            .auth-nav { height: 66px; padding: 0 16px; }
+            .auth-layout { min-height: calc(100vh - 66px); padding: 32px 16px; }
+            .auth-panel { padding: 22px 18px; }
+            .intro h1 { font-size: 40px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="auth-nav">
+        <a class="brand" href="{% url 'account' %}" aria-label="EmmySolution Media Dynamics">
+            <span class="brand-mark" aria-hidden="true">E</span>
+            <span class="brand-name"><strong>EmmySolution</strong><span>MEDIA DYNAMICS</span></span>
+        </a>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to dark mode" title="Toggle theme">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A8.5 8.5 0 0 1 11 3.1 8.5 8.5 0 1 0 20.9 13Z"/></svg>
+        </button>
+    </header>
+
+    <main class="auth-layout">
+        <section class="intro">
+            <span class="eyebrow">EmmySolution Media Dynamics</span>
+            <h1>Make every<br>vote count.</h1>
+            <p>Sign in to follow live results and candidate standings from the EmmySolution voting dashboard.</p>
+            <div class="intro-rule" aria-hidden="true"></div>
+        </section>
+
+        <section class="auth-panel" aria-label="Account access">
+            <div class="tabs" role="tablist" aria-label="Choose account action">
+                <button class="tab" id="login-tab" type="button" role="tab" aria-selected="true" aria-controls="login-panel">Log in</button>
+                <button class="tab" id="register-tab" type="button" role="tab" aria-selected="false" aria-controls="register-panel">Create account</button>
+            </div>
+
+            <div class="form-panel" id="login-panel" role="tabpanel" aria-labelledby="login-tab">
+                <h2>Welcome back</h2>
+                <p class="form-hint">Log in to open the live voting dashboard.</p>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="login">
+                    {% if login_form.non_field_errors %}<div class="form-errors">{{ login_form.non_field_errors }}</div>{% endif %}
+                    {% for field in login_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<ul class="field-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                    {% endfor %}
+                    <button class="submit-button" type="submit">Log in</button>
+                </form>
+            </div>
+
+            <div class="form-panel" id="register-panel" role="tabpanel" aria-labelledby="register-tab" hidden>
+                <h2>Create your account</h2>
+                <p class="form-hint">Register once, then you’ll be signed in automatically.</p>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="register">
+                    {% if registration_form.non_field_errors %}<div class="form-errors">{{ registration_form.non_field_errors }}</div>{% endif %}
+                    {% for field in registration_form %}
+                        <div class="field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<div class="form-hint">{{ field.help_text|safe }}</div>{% endif %}
+                            {% if field.errors %}<ul class="field-errors">{% for error in field.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                    {% endfor %}
+                    <button class="submit-button" type="submit">Create account</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const root = document.documentElement;
+        const themeButton = document.getElementById('theme-toggle');
+        const themeIcon = themeButton.querySelector('svg');
+
+        function setTheme(theme) {
+            root.dataset.theme = theme;
+            const dark = theme === 'dark';
+            themeButton.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+            themeIcon.innerHTML = dark
+                ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>'
+                : '<path d="M20.9 13A8.5 8.5 0 0 1 11 3.1 8.5 8.5 0 1 0 20.9 13Z"/>';
+            try { localStorage.setItem('emmy-theme', theme); } catch (error) { }
+        }
+
+        themeButton.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+        const tabs = document.querySelectorAll('.tab');
+        const panels = document.querySelectorAll('.form-panel');
+        function selectTab(tab) {
+            tabs.forEach(item => item.setAttribute('aria-selected', String(item === tab)));
+            panels.forEach(panel => { panel.hidden = panel.id !== tab.getAttribute('aria-controls'); });
+        }
+        tabs.forEach(tab => tab.addEventListener('click', () => selectTab(tab)));
+
+        {% if registration_form.errors %}selectTab(document.getElementById('register-tab'));{% endif %}
+        {% if login_form.errors %}selectTab(document.getElementById('login-tab'));{% endif %}
+    </script>
+</body>
+</html>
