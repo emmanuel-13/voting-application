@@ -698,8 +698,7 @@
                     });
                 }
 
-                if (recData && recData.vote && recData.vote.candidate &&
-                    document.getElementById('history-body').dataset.page === '1') {
+                if (recData && recData.vote && recData.vote.candidate) {
                     const historyBody = document.getElementById('history-body');
                     const emptyRow = historyBody.querySelector('.history-empty');
                     if (emptyRow) emptyRow.remove();

@@ -92,13 +92,6 @@ DATABASES = {
     }
 }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
 
 # CHANNEL_LAYERS = {
 #     'default': {
@@ -110,31 +103,31 @@ DATABASES = {
 # }
 
 
-REDIS_URL = os.environ.get('REDIS_URL')
-REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
-REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
-REDIS_HOSTS = [
-    REDIS_URL or {
-        'host': REDIS_HOST,
-        'port': REDIS_PORT,
-        'protocol': 2,
-    }
-]
-
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": REDIS_HOSTS,
-        },
-    },
-}
+# REDIS_URL = os.environ.get('REDIS_URL')
+# REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+# REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
+# REDIS_HOSTS = [
+#     REDIS_URL or {
+#         'host': REDIS_HOST,
+#         'port': REDIS_PORT,
+#         'protocol': 2,
+#     }
+# ]
 
 # CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels.layers.InMemoryChannelLayer',
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": REDIS_HOSTS,
+#         },
 #     },
 # }
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 
 # Password validation
