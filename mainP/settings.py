@@ -31,7 +31,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get(
     'DJANGO_ALLOWED_HOSTS',
-    'kiesha-unpurled-preston.ngrok-free.dev,localhost,127.0.0.1',
+    'kiesha-unpurled-preston.ngrok-free.dev,localhost,127.0.0.1,voting-application-8c44.onrender.com',
 ).split(',')
 
 
