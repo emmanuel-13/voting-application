@@ -37,6 +37,9 @@ Google Sheets is the raw form-response store in this design. Django does not cur
 |-- firstPage/             # Vote model, webhook view, and Channels consumers
 |-- template/main/account.html # Combined login and registration page
 |-- template/main/home.html    # Authenticated real-time dashboard
+|-- static/                # Source static assets
+|-- staticfiles/            # collectstatic output (generated, not committed)
+|-- media/                  # User-uploaded media (not committed)
 |-- requirements.txt
 `-- README.md
 ```
@@ -49,7 +52,7 @@ Start Docker Desktop, then from this directory run:
 docker compose up --build
 ```
 
-Open <http://localhost:8000>. Compose runs database migrations before starting Django's development server. Stop the service with `Ctrl+C`; run `docker compose down` to remove the Compose container and network. The source folder is mounted into the container for development.
+Open <http://localhost:8000>. Register an account, then use Django Admin to approve it before signing in. Compose starts Redis for Channels, waits for it to become healthy, runs database migrations, and starts Django's development server. Stop the service with `Ctrl+C`; run `docker compose down` to remove the Compose containers and network. The source folder is mounted into the container for development.
 
 Compose uses a development-only fallback Django secret key. To override it, create a local `.env` file (it is ignored by Git):
 
@@ -59,6 +62,8 @@ DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 ```
 
 For a public test tunnel, add its hostname to `DJANGO_ALLOWED_HOSTS`, without a scheme or port. Google Apps Script runs on Google's servers, so it cannot call a Django server that is only available on your computer's `localhost`; use a publicly reachable HTTPS deployment or tunnel for testing.
+
+For a hosted deployment, configure `REDIS_URL` with the connection URL for the platform's Redis service so Channels can broadcast across web workers.
 
 ## Run locally with Python
 
@@ -78,11 +83,11 @@ Open <http://127.0.0.1:8000>. To run the Django system checks:
 python manage.py check
 ```
 
-The development server and in-memory Channels layer are for local development, not production.
+The development server is for local development, not production. Start a local Redis-compatible service on `127.0.0.1:6379` before running Django, or set `REDIS_URL` to its connection URL. `static/` is the source folder, `staticfiles/` is the `collectstatic` destination, and `media/` holds uploaded files. During `DEBUG=True`, Django serves static and media URLs using the project URL configuration. Run `python manage.py collectstatic` to gather static assets for deployment; serve the collected files and persistent user media through your production host or storage service.
 
 ## User accounts
 
-The dashboard requires an account. Opening `/` while signed out redirects to `/account/`, where the **Log in** and **Create account** tabs share one page. Registration asks for a username, email address, and password; a successful registration signs the user in and opens the dashboard. Returning users log in with their username and password. The dashboard profile menu displays the signed-in username and provides a CSRF-protected logout action. The account page and dashboard share a light/dark theme preference saved in the browser.
+The dashboard requires an administrator-approved account. Opening `/` while signed out redirects to `/account/`, where the **Log in** and **Create account** tabs share one page. Registration asks for a username, email address, and password, then creates an inactive account; registration does not sign the user in. An administrator reviews the account in **Admin > Users**, selects the account, and applies **Approve selected accounts**. Only after approval can the user log in with their username and password. The dashboard profile menu displays the signed-in username and provides a CSRF-protected logout action. The account page and dashboard share a light/dark theme preference saved in the browser.
 
 The dashboard WebSocket at `/ws/votes/` also rejects unauthenticated connections. The Google Apps Script webhook at `/google/` remains separate from user sessions so the Google trigger can submit votes; secure that endpoint before public production use.
 
@@ -152,15 +157,17 @@ The event's `namedValues` keys are the response Sheet's question/column headings
 - **URL:** `ws://localhost:8000/ws/votes/` during local development.
 - **Message:** JSON containing a `type` of `vote_update` and a `votes` object, for example `{"type":"vote_update","votes":{"Candidate A":1}}`.
 
-The webhook broadcasts after a vote is accepted. The current consumer does not load historical totals when a browser first connects, so the dashboard starts with zeroes and receives totals after a new accepted vote is broadcast.
+The dashboard loads aggregate totals and the latest saved votes from SQLite when the page opens. The history table is paginated at 50 votes per page; each new vote is broadcast over Channels, updates the live totals, and appears at the top of page one. Voter email addresses are not sent to dashboard users.
 
 ## Data and administration
 
-The `Vote` model stores an email, candidate string, and creation timestamp. Its unique constraint allows only one row per email. Django admin is available at <http://localhost:8000/admin/> after creating an administrator with:
+The `Vote` model stores an email, candidate string, and creation timestamp. Its unique constraint allows only one row per email. Django Admin is available at <http://localhost:8000/admin/> after creating an initial administrator with:
 
 ```powershell
 python manage.py createsuperuser
 ```
+
+Registered users appear in **Admin > Users**. Select pending users and run **Approve selected accounts** to activate them so they can log in. The admin can review submitted account details there; voter email addresses remain admin-only.
 
 The database is SQLite at `db.sqlite3`. That local database is excluded from Git and from the Docker build context; Compose's source bind mount keeps it on the host during development.
 
@@ -169,10 +176,11 @@ The database is SQLite at `db.sqlite3`. That local database is excluded from Git
 - **Prototype security:** The webhook is CSRF-exempt and currently has no authentication or shared-secret verification. Anyone who can reach it could submit fabricated votes. Add request authentication/signature verification, rate limiting, and server-side candidate validation before using this for a real election.
 - **Email identity:** The unique constraint prevents duplicate submissions for the same exact email string in Django. It does not verify email ownership or normalize case/whitespace. Google Forms email collection can help identify respondents, but the webhook itself does not verify that identity.
 - **Development configuration:** `DEBUG` is enabled, the fallback secret is not suitable for production, and `runserver` is a development server. Use a production ASGI server, HTTPS/WSS, protected secrets, and `DEBUG=False` for deployment.
-- **Channels scaling:** Settings currently use `InMemoryChannelLayer`, which only shares messages within one process. For multiple workers/instances, configure Redis using the installed `channels_redis` package and a shared Redis service.
+- **Channels scaling:** Channels uses Redis, configured by `REDIS_URL` or `REDIS_HOST` and `REDIS_PORT`. Use one shared Redis service for all web workers; Compose starts a local Redis service named `redis`.
 - **Database persistence:** SQLite is suitable for this prototype. Choose a production database and persistent storage/backups before running a real vote.
 - **Dashboard analytics:** Candidate totals are live counts, not time-series data. Time-range buttons and several trend/participation labels in the current page are presentation placeholders and do not calculate historical metrics.
-- **Browser WebSocket URL:** The dashboard currently connects to `ws://localhost:8000/ws/votes/`. A deployed site must use a host-relative WebSocket URL and `wss://` over HTTPS.
+- **Static and uploaded files:** Django's URL-based static/media serving is only enabled for development. Configure the deployment platform or object storage for collected static assets and durable uploaded media.
+- **Browser WebSocket URL:** The dashboard chooses `ws://` locally and `wss://` for HTTPS deployments.
 - **Apps Script deployment:** Apps Script must reach Django over the public internet. Do not expose a local-only server or place secrets in a publicly shared script; secure the endpoint before production use.
 
 ## License

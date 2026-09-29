@@ -127,6 +127,8 @@
         .tab { min-height: 42px; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font: inherit; font-weight: 650; cursor: pointer; }
         .tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 5px rgba(25, 43, 33, 0.1); }
         .form-panel[hidden] { display: none; }
+        .messages { margin: 18px 0 0; padding: 0; list-style: none; }
+        .messages li { padding: 12px; border-left: 3px solid #315c43; background: rgba(49, 92, 67, 0.1); color: var(--ink); font-size: 14px; line-height: 1.5; }
         .form-panel h2 { margin: 24px 0 6px; font: 500 28px Georgia, serif; }
         .form-hint { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
         .field { margin: 16px 0; }
@@ -174,12 +176,17 @@
         </section>
 
         <section class="auth-panel" aria-label="Account access">
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+                </ul>
+            {% endif %}
             <div class="tabs" role="tablist" aria-label="Choose account action">
-                <button class="tab" id="login-tab" type="button" role="tab" aria-selected="true" aria-controls="login-panel">Log in</button>
-                <button class="tab" id="register-tab" type="button" role="tab" aria-selected="false" aria-controls="register-panel">Create account</button>
+                <button class="tab" id="login-tab" type="button" role="tab" aria-selected="{% if not registration_form.errors %}true{% else %}false{% endif %}" aria-controls="login-panel">Log in</button>
+                <button class="tab" id="register-tab" type="button" role="tab" aria-selected="{% if registration_form.errors %}true{% else %}false{% endif %}" aria-controls="register-panel">Create account</button>
             </div>
 
-            <div class="form-panel" id="login-panel" role="tabpanel" aria-labelledby="login-tab">
+            <div class="form-panel" id="login-panel" role="tabpanel" aria-labelledby="login-tab"{% if registration_form.errors %} hidden{% endif %}>
                 <h2>Welcome back</h2>
                 <p class="form-hint">Log in to open the live voting dashboard.</p>
                 <form method="post" novalidate>
@@ -197,9 +204,9 @@
                 </form>
             </div>
 
-            <div class="form-panel" id="register-panel" role="tabpanel" aria-labelledby="register-tab" hidden>
+            <div class="form-panel" id="register-panel" role="tabpanel" aria-labelledby="register-tab"{% if not registration_form.errors %} hidden{% endif %}>
                 <h2>Create your account</h2>
-                <p class="form-hint">Register once, then you’ll be signed in automatically.</p>
+                <p class="form-hint">Your details will be reviewed by an administrator before your account is activated.</p>
                 <form method="post" novalidate>
                     {% csrf_token %}
                     <input type="hidden" name="form_type" value="register">
@@ -243,8 +250,6 @@
         }
         tabs.forEach(tab => tab.addEventListener('click', () => selectTab(tab)));
 
-        {% if registration_form.errors %}selectTab(document.getElementById('register-tab'));{% endif %}
-        {% if login_form.errors %}selectTab(document.getElementById('login-tab'));{% endif %}
     </script>
 </body>
 </html>

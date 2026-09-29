@@ -4,5 +4,7 @@ venv/
 __pycache__/
 *.py[cod]
 *.sqlite3
+staticfiles/
+media/
 .ipynb_checkpoints/
 .env

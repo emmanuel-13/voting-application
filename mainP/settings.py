@@ -110,17 +110,22 @@ DATABASES = {
 # }
 
 
+REDIS_URL = os.environ.get('REDIS_URL')
+REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', '6379'))
+REDIS_HOSTS = [
+    REDIS_URL or {
+        'host': REDIS_HOST,
+        'port': REDIS_PORT,
+        'protocol': 2,
+    }
+]
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [
-                {
-                    "host": "127.0.0.1",
-                    "port": 6379,
-                    "protocol": 2,
-                }
-            ],
+            "hosts": REDIS_HOSTS,
         },
     },
 }
@@ -167,9 +172,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 # MEDIA_ROOT = BASE_DIR / 'media'
 
-STATIC_URL = 'static/'
-# STATIC_ROOT = BASE_DIR / 'admin_static'
-# STATICFILES_DIRS = BASE_DIR / "static"
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
 # Email

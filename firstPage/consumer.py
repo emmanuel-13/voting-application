@@ -124,7 +124,8 @@ class VoteConsumer(AsyncWebsocketConsumer):
         await self.send(
             text_data=json.dumps({
                 "type": "vote_update",
-                "votes": event["votes"]
+                "votes": event["votes"],
+                "vote": event.get("vote"),
             })
         )
         

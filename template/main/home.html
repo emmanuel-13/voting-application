@@ -282,6 +282,27 @@
             padding: 18px 18px 8px;
         }
 
+        .history-card {
+            margin-top: 18px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--panel);
+        }
+
+        .history-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+        .history-heading h2 { margin: 0; font-size: 18px; }
+        .history-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+        .history-scroll { overflow-x: auto; }
+        .history-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .history-table th, .history-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); }
+        .history-table th { color: var(--muted); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+        .history-table td { font-size: 14px; }
+        .history-empty { color: var(--muted); text-align: center; }
+        .history-pagination { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-top: 14px; color: var(--muted); font-size: 13px; }
+        .history-pagination a { color: var(--text); font-weight: 650; text-decoration-color: var(--primary); text-underline-offset: 3px; }
+        .history-pagination a[aria-disabled="true"] { visibility: hidden; }
+
         .chart-header {
             display: flex;
             justify-content: space-between;
@@ -449,10 +470,45 @@
                 <canvas id="myChart"></canvas>
             </div>
         </div>
+
+        <section class="history-card" aria-labelledby="history-title">
+            <div class="history-heading">
+                <h2 id="history-title">Recent vote activity</h2>
+                <p>Saved votes, newest first. Voter identities are only visible to administrators.</p>
+            </div>
+            <div class="history-scroll">
+                <table class="history-table">
+                    <thead>
+                        <tr><th scope="col">Candidate</th><th scope="col">Submitted</th></tr>
+                    </thead>
+                    <tbody id="history-body" data-page="{{ recent_votes.number }}">
+                        {% for saved_vote in recent_votes %}
+                            <tr><td>{{ saved_vote.candidate }}</td><td><time datetime="{{ saved_vote.date_created|date:'c' }}">{{ saved_vote.date_created|date:'M j, Y, g:i a' }}</time></td></tr>
+                        {% empty %}
+                            <tr class="history-empty"><td colspan="2">No votes have been recorded yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <nav class="history-pagination" aria-label="Vote history pages">
+                {% if recent_votes.has_previous %}
+                    <a href="?page={{ recent_votes.previous_page_number }}">Previous</a>
+                {% else %}
+                    <a aria-disabled="true">Previous</a>
+                {% endif %}
+                <span>Page {{ recent_votes.number }} of {{ recent_votes.paginator.num_pages }}</span>
+                {% if recent_votes.has_next %}
+                    <a href="?page={{ recent_votes.next_page_number }}">Next</a>
+                {% else %}
+                    <a aria-disabled="true">Next</a>
+                {% endif %}
+            </nav>
+        </section>
+        {{ vote_totals|json_script:"initial-vote-totals" }}
     </div>
 
     <script>
-        const liveVotes = {};
+        const liveVotes = JSON.parse(document.getElementById('initial-vote-totals').textContent);
 
         function formatLabel(key) {
             return String(key)
@@ -640,6 +696,28 @@
                             liveVotes[String(key)] = numericValue;
                         }
                     });
+                }
+
+                if (recData && recData.vote && recData.vote.candidate &&
+                    document.getElementById('history-body').dataset.page === '1') {
+                    const historyBody = document.getElementById('history-body');
+                    const emptyRow = historyBody.querySelector('.history-empty');
+                    if (emptyRow) emptyRow.remove();
+
+                    const row = document.createElement('tr');
+                    const candidateCell = document.createElement('td');
+                    candidateCell.textContent = recData.vote.candidate;
+                    const timeCell = document.createElement('td');
+                    const timeElement = document.createElement('time');
+                    const submittedAt = new Date(recData.vote.date_created);
+                    timeElement.dateTime = recData.vote.date_created;
+                    timeElement.textContent = submittedAt.toLocaleString();
+                    timeCell.appendChild(timeElement);
+                    row.append(candidateCell, timeCell);
+                    historyBody.prepend(row);
+
+                    const rows = historyBody.querySelectorAll('tr');
+                    if (rows.length > 50) rows[50].remove();
                 }
 
                 if (recData && recData.candidate) {
