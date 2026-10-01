@@ -133,9 +133,11 @@ class VoteConsumer2(AsyncWebsocketConsumer):
 
     async def connect(self):
         user = self.scope.get("user")
-        if user is None or not user.is_authenticated:
-            await self.close(code=4401)
-            return
+        self.is_admin = bool(
+            user
+            and user.is_authenticated
+            and (user.is_staff or user.is_superuser)
+        )
 
         self.group_name = "vote_results"
 
@@ -154,9 +156,10 @@ class VoteConsumer2(AsyncWebsocketConsumer):
         )
 
     async def vote_update(self, event):
-        await self.send(
-            text_data=json.dumps({
-                "type": "vote_update",
-                "votes": event["votes"]
-            })
-        )
+        message = {
+            "type": "vote_update",
+            "votes": event["votes"],
+        }
+        if self.is_admin and event.get("vote"):
+            message["vote"] = event["vote"]
+        await self.send(text_data=json.dumps(message))

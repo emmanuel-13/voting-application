@@ -78,6 +78,28 @@
 
         .nav-actions { display: flex; align-items: center; gap: 10px; }
 
+        .auth-links { display: flex; align-items: center; gap: 8px; }
+        .auth-link { padding: 9px 13px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 14px; font-weight: 650; text-decoration: none; }
+        .auth-link.primary { border-color: #315c43; background: #315c43; color: #fff; }
+        .auth-link:hover { border-color: var(--primary); }
+
+        .page-loading {
+            position: fixed;
+            z-index: 20;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: rgba(15, 25, 19, 0.42);
+            backdrop-filter: blur(3px);
+        }
+        .page-loading[hidden] { display: none; }
+        .loading-message { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); font-weight: 650; box-shadow: var(--shadow); }
+        .loading-spinner { width: 19px; height: 19px; flex: 0 0 auto; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        .inline-loading { display: inline-flex; align-items: center; gap: 7px; color: var(--primary); font-size: 13px; }
+        .inline-loading .loading-spinner { width: 15px; height: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        button[aria-busy="true"] { cursor: progress; opacity: 0.82; }
+
         .nav-icon-button, .profile-button {
             width: 40px;
             height: 40px;
@@ -166,6 +188,8 @@
             color: #4338ca;
             border: 1px solid #c7d2fe;
         }
+
+        .dashboard-messages { margin: -10px 0 22px; padding: 12px 14px; border-left: 3px solid #315c43; background: rgba(49, 92, 67, 0.1); color: var(--text); font-size: 14px; }
 
         .kpi-grid {
             display: grid;
@@ -377,6 +401,7 @@
             <button class="nav-icon-button" id="theme-toggle" type="button" aria-label="Switch to dark mode" title="Toggle theme">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A8.5 8.5 0 0 1 11 3.1 8.5 8.5 0 1 0 20.9 13Z"/></svg>
             </button>
+            {% if request.user.is_authenticated %}
             <div class="profile-menu">
                 <button class="profile-button" id="profile-toggle" type="button" aria-label="Open profile menu" aria-expanded="false" aria-controls="profile-dropdown">
                     {{ request.user.username|first|upper }}
@@ -389,6 +414,12 @@
                     </form>
                 </div>
             </div>
+            {% else %}
+            <div class="auth-links">
+                <a class="auth-link" href="{% url 'account' %}">Log in</a>
+                <a class="auth-link primary" href="{% url 'account' %}#register">Register</a>
+            </div>
+            {% endif %}
         </div>
     </nav>
 
@@ -397,6 +428,9 @@
             <h1>Real-Time Voting Dashboard</h1>
             <div class="status" id="status">Connecting...</div>
         </div>
+        {% if messages %}
+            <div class="dashboard-messages" role="status">{% for message in messages %}{{ message }}{% endfor %}</div>
+        {% endif %}
 
         <div class="kpi-grid">
             <div class="kpi-card">
@@ -445,6 +479,7 @@
                     <option value="candidate_2">Candidate 2</option>
                     <option value="candidate_3">Candidate 3</option>
                 </select>
+                <span class="inline-loading" id="filter-loading" aria-live="polite" hidden><span class="loading-spinner" aria-hidden="true"></span>Updating results</span>
             </div>
 
             <div class="filter-group">
@@ -471,21 +506,22 @@
             </div>
         </div>
 
+        {% if is_admin %}
         <section class="history-card" aria-labelledby="history-title">
             <div class="history-heading">
                 <h2 id="history-title">Recent vote activity</h2>
-                <p>Saved votes, newest first. Voter identities are only visible to administrators.</p>
+            <p>Voter email, candidate, and submission time. New votes appear live.</p>
             </div>
             <div class="history-scroll">
                 <table class="history-table">
                     <thead>
-                        <tr><th scope="col">Candidate</th><th scope="col">Submitted</th></tr>
+                        <tr><th scope="col">Voter email</th><th scope="col">Candidate</th><th scope="col">Submitted</th></tr>
                     </thead>
                     <tbody id="history-body" data-page="{{ recent_votes.number }}">
                         {% for saved_vote in recent_votes %}
-                            <tr><td>{{ saved_vote.candidate }}</td><td><time datetime="{{ saved_vote.date_created|date:'c' }}">{{ saved_vote.date_created|date:'M j, Y, g:i a' }}</time></td></tr>
+                            <tr><td>{{ saved_vote.email }}</td><td>{{ saved_vote.candidate }}</td><td><time datetime="{{ saved_vote.date_created|date:'c' }}">{{ saved_vote.date_created|date:'M j, Y, g:i a' }}</time></td></tr>
                         {% empty %}
-                            <tr class="history-empty"><td colspan="2">No votes have been recorded yet.</td></tr>
+                            <tr class="history-empty"><td colspan="3">No votes have been recorded yet.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -504,7 +540,12 @@
                 {% endif %}
             </nav>
         </section>
+        {% endif %}
         {{ vote_totals|json_script:"initial-vote-totals" }}
+    </div>
+
+    <div class="page-loading" id="page-loading" role="status" aria-live="assertive" hidden>
+        <div class="loading-message"><span class="loading-spinner" aria-hidden="true"></span><span id="page-loading-text">Taking you there...</span></div>
     </div>
 
     <script>
@@ -529,11 +570,9 @@
             const selector = document.getElementById('candidate-select');
             const currentValue = selector.value;
             const allEntries = getCandidateEntries();
-
-            selector.innerHTML = '<option value="all">All candidates</option>' +
-                allEntries
-                    .map(([key]) => `<option value="${key}">${formatLabel(key)}</option>`)
-                    .join('');
+            const options = [new Option('All candidates', 'all')];
+            allEntries.forEach(([key]) => options.push(new Option(formatLabel(key), key)));
+            selector.replaceChildren(...options);
 
             if (allEntries.some(([key]) => key === currentValue)) {
                 selector.value = currentValue;
@@ -597,6 +636,15 @@
             updateKPIs();
         }
 
+        function applyFiltersWithLoading() {
+            const loadingIndicator = document.getElementById('filter-loading');
+            loadingIndicator.hidden = false;
+            window.requestAnimationFrame(() => {
+                applyFilters();
+                window.setTimeout(() => { loadingIndicator.hidden = true; }, 220);
+            });
+        }
+
         const ctx = document.getElementById('myChart');
 
         const dataObj = {
@@ -633,13 +681,13 @@
             window.myLine = new Chart(ctx, dataObj);
         }
 
-        document.getElementById('candidate-select').addEventListener('change', applyFilters);
+        document.getElementById('candidate-select').addEventListener('change', applyFiltersWithLoading);
 
         document.querySelectorAll('.filter-btn').forEach(button => {
             button.addEventListener('click', function () {
                 document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
                 this.classList.add('active');
-                applyFilters();
+                applyFiltersWithLoading();
             });
         });
 
@@ -677,6 +725,33 @@
             }
         });
 
+        const pageLoading = document.getElementById('page-loading');
+        function showPageLoading(message) {
+            document.getElementById('page-loading-text').textContent = message;
+            pageLoading.hidden = false;
+        }
+        document.addEventListener('submit', event => {
+            const submitButton = event.submitter;
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.setAttribute('aria-busy', 'true');
+                submitButton.textContent = submitButton.dataset.loadingLabel || 'Please wait...';
+                const spinner = document.createElement('span');
+                spinner.className = 'loading-spinner';
+                spinner.setAttribute('aria-hidden', 'true');
+                submitButton.prepend(spinner);
+            }
+            showPageLoading('Submitting...');
+        });
+        document.addEventListener('click', event => {
+            const link = event.target.closest('a[href]');
+            if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || link.target === '_blank') return;
+            const destination = new URL(link.href, window.location.href);
+            if (destination.origin === window.location.origin && destination.href !== window.location.href) {
+                showPageLoading('Taking you there...');
+            }
+        });
+
         socket.onopen = function () {
             console.log('Connection established');
             document.getElementById('status').innerText = '🟢 Connected to voting server';
@@ -698,13 +773,15 @@
                     });
                 }
 
-                if (recData && recData.vote && recData.vote.candidate) {
-                    const historyBody = document.getElementById('history-body');
+                const historyBody = document.getElementById('history-body');
+                if (recData && recData.vote && recData.vote.email && historyBody) {
                     const emptyRow = historyBody.querySelector('.history-empty');
                     if (emptyRow) emptyRow.remove();
 
                     const row = document.createElement('tr');
+                    const emailCell = document.createElement('td');
                     const candidateCell = document.createElement('td');
+                    emailCell.textContent = recData.vote.email;
                     candidateCell.textContent = recData.vote.candidate;
                     const timeCell = document.createElement('td');
                     const timeElement = document.createElement('time');
@@ -712,7 +789,7 @@
                     timeElement.dateTime = recData.vote.date_created;
                     timeElement.textContent = submittedAt.toLocaleString();
                     timeCell.appendChild(timeElement);
-                    row.append(candidateCell, timeCell);
+                    row.append(emailCell, candidateCell, timeCell);
                     historyBody.prepend(row);
 
                     const rows = historyBody.querySelectorAll('tr');

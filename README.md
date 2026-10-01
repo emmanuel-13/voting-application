@@ -36,7 +36,7 @@ Google Sheets is the raw form-response store in this design. Django does not cur
 |-- mainP/                 # Django project settings, URLs, ASGI routing
 |-- firstPage/             # Vote model, webhook view, and Channels consumers
 |-- template/main/account.html # Combined login and registration page
-|-- template/main/home.html    # Authenticated real-time dashboard
+|-- template/main/home.html    # Public results dashboard with admin-only voter history
 |-- static/                # Source static assets
 |-- staticfiles/            # collectstatic output (generated, not committed)
 |-- media/                  # User-uploaded media (not committed)
@@ -52,7 +52,7 @@ Start Docker Desktop, then from this directory run:
 docker compose up --build
 ```
 
-Open <http://localhost:8000>. Register an account, then use Django Admin to approve it before signing in. Compose starts Redis for Channels, waits for it to become healthy, runs database migrations, and starts Django's development server. Stop the service with `Ctrl+C`; run `docker compose down` to remove the Compose containers and network. The source folder is mounted into the container for development.
+Open <http://localhost:8000> to view the public results dashboard. Registration is optional and new accounts are active immediately. Compose starts Redis for Channels, waits for it to become healthy, runs database migrations, and starts Django's development server. Stop the service with `Ctrl+C`; run `docker compose down` to remove the Compose containers and network. The source folder is mounted into the container for development.
 
 Compose uses a development-only fallback Django secret key. To override it, create a local `.env` file (it is ignored by Git):
 
@@ -77,7 +77,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Open <http://127.0.0.1:8000>. To run the Django system checks:
+Open <http://127.0.0.1:8000> to view the public results dashboard. To run the Django system checks:
 
 ```powershell
 python manage.py check
@@ -87,9 +87,9 @@ The development server is for local development, not production. Start a local R
 
 ## User accounts
 
-The dashboard requires an administrator-approved account. Opening `/` while signed out redirects to `/account/`, where the **Log in** and **Create account** tabs share one page. Registration asks for a username, email address, and password, then creates an inactive account; registration does not sign the user in. An administrator reviews the account in **Admin > Users**, selects the account, and applies **Approve selected accounts**. Only after approval can the user log in with their username and password. The dashboard profile menu displays the signed-in username and provides a CSRF-protected logout action. The account page and dashboard share a light/dark theme preference saved in the browser.
+The dashboard at `/` is public and displays aggregate vote totals to everyone. Registration is optional; the **Log in** and **Create account** tabs share `/account/`. Registration asks for a username, email address, and password, activates the account immediately, signs the user in, and redirects to the dashboard. Signed-in users can log out through the dashboard profile menu. Only staff or superusers see the individual vote history, including voter email, candidate, and submission time. The account page and dashboard share a light/dark theme preference saved in the browser.
 
-The dashboard WebSocket at `/ws/votes/` also rejects unauthenticated connections. The Google Apps Script webhook at `/google/` remains separate from user sessions so the Google trigger can submit votes; secure that endpoint before public production use.
+The dashboard WebSocket at `/ws/votes/` is public for aggregate updates. Individual vote details are included only in messages delivered to staff or superuser connections. The Google Apps Script webhook at `/google/` remains separate from user sessions so the Google trigger can submit votes; secure that endpoint before public production use.
 
 ## Configure Google Forms, Sheets, and Apps Script
 
@@ -157,7 +157,7 @@ The event's `namedValues` keys are the response Sheet's question/column headings
 - **URL:** `ws://localhost:8000/ws/votes/` during local development.
 - **Message:** JSON containing a `type` of `vote_update` and a `votes` object, for example `{"type":"vote_update","votes":{"Candidate A":1}}`.
 
-The dashboard loads aggregate totals and the latest saved votes from SQLite when the page opens. The history table is paginated at 50 votes per page; each new vote is broadcast over Channels, updates the live totals, and appears at the top of page one. Voter email addresses are not sent to dashboard users.
+The dashboard loads aggregate totals from SQLite when the page opens. Staff and superusers also receive the latest saved vote details, paginated at 50 votes per page. Each new vote updates aggregate totals for all dashboard visitors and adds the full voter record to connected admin dashboards in real time.
 
 ## Data and administration
 
@@ -167,7 +167,7 @@ The `Vote` model stores an email, candidate string, and creation timestamp. Its 
 python manage.py createsuperuser
 ```
 
-Registered users appear in **Admin > Users**. Select pending users and run **Approve selected accounts** to activate them so they can log in. The admin can review submitted account details there; voter email addresses remain admin-only.
+Registered users appear in **Admin > Users**. Admins can review voter email addresses and other stored vote details in the dashboard's Recent vote activity table; those details are excluded from public pages and public WebSocket messages.
 
 The database is SQLite at `db.sqlite3`. That local database is excluded from Git and from the Docker build context; Compose's source bind mount keeps it on the host during development.
 

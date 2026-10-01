@@ -1,11 +1,14 @@
 
 import json
+from unittest.mock import AsyncMock
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from .consumer import VoteConsumer2
 from django.test import TestCase
 from django.test import override_settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.urls import reverse
 from .models import Vote
 
@@ -14,43 +17,37 @@ User = get_user_model()
 
 
 class AccountFlowTests(TestCase):
-	def test_dashboard_redirects_anonymous_users_to_account_page(self):
+	def test_dashboard_is_public(self):
 		response = self.client.get("/")
 
-		self.assertRedirects(response, "/account/?next=/")
+		self.assertEqual(response.status_code, 200)
 
-	def test_registration_waits_for_admin_approval(self):
+	def test_registration_activates_and_signs_in_user(self):
 		response = self.client.post("/account/", {
 			"form_type": "register",
 			"username": "newvoter",
 			"email": "voter@example.com",
 			"password1": "A-secure-test-password-872!",
 			"password2": "A-secure-test-password-872!",
-		}, follow=True)
+		})
 
-		self.assertEqual(response.redirect_chain, [("/account/", 302)])
+		self.assertRedirects(response, "/")
 		user = User.objects.get(username="newvoter")
-		self.assertFalse(user.is_active)
-		self.assertFalse(self.client.session.get("_auth_user_id"))
-		self.assertContains(response, "An administrator must approve")
+		self.assertTrue(user.is_active)
+		self.assertEqual(int(self.client.session["_auth_user_id"]), user.pk)
 
-	def test_admin_approval_allows_user_to_login(self):
-		self.client.post("/account/", {
-			"form_type": "register",
-			"username": "returningvoter",
-			"email": "returning@example.com",
-			"password1": "A-secure-test-password-872!",
-			"password2": "A-secure-test-password-872!",
-		})
-		user = User.objects.get(username="returningvoter")
+	def test_voter_details_are_visible_only_to_admins(self):
+		Vote.objects.create(email="private-one@example.com", candidate="Candidate A")
+		Vote.objects.create(email="private-two@example.com", candidate="Candidate A")
+		Vote.objects.create(email="private-three@example.com", candidate="Candidate B")
 
-		response = self.client.post("/account/", {
-			"form_type": "login",
-			"username": "returningvoter",
-			"password": "A-secure-test-password-872!",
-		})
-		self.assertEqual(response.status_code, 200)
-		self.assertFalse(self.client.session.get("_auth_user_id"))
+		public_response = self.client.get("/")
+
+		self.assertEqual(public_response.status_code, 200)
+		self.assertEqual(public_response.context["vote_totals"], {"Candidate A": 2, "Candidate B": 1})
+		self.assertIsNone(public_response.context["recent_votes"])
+		self.assertNotContains(public_response, "private-one@example.com")
+		self.assertNotContains(public_response, "private-two@example.com")
 
 		admin = User.objects.create_superuser(
 			username="reviewer",
@@ -58,44 +55,18 @@ class AccountFlowTests(TestCase):
 			password="Admin-test-password-872!",
 		)
 		self.client.force_login(admin)
-		response = self.client.post(reverse("admin:auth_user_changelist"), {
-			"action": "approve_accounts",
-			"_selected_action": [str(user.pk)],
-			"index": "0",
-		})
-		self.assertEqual(response.status_code, 302)
-		user.refresh_from_db()
-		self.assertTrue(user.is_active)
-		self.client.logout()
-
-		response = self.client.post("/account/", {
-			"form_type": "login",
-			"username": "returningvoter",
-			"password": "A-secure-test-password-872!",
-		})
-
-		self.assertRedirects(response, "/")
-		self.assertTrue(self.client.session.get("_auth_user_id"))
-
-	def test_dashboard_loads_saved_totals_and_recent_vote_details(self):
-		user = User.objects.create_user(username="approvedvoter", password="test-pass-872!")
-		self.client.force_login(user)
-		Vote.objects.create(email="private-one@example.com", candidate="Candidate A")
-		Vote.objects.create(email="private-two@example.com", candidate="Candidate A")
-		Vote.objects.create(email="private-three@example.com", candidate="Candidate B")
-
-		response = self.client.get("/")
-
-		self.assertEqual(response.status_code, 200)
-		self.assertEqual(response.context["vote_totals"], {"Candidate A": 2, "Candidate B": 1})
-		self.assertEqual(len(response.context["recent_votes"]), 3)
-		self.assertContains(response, "Candidate A")
-		self.assertContains(response, "Candidate B")
-		self.assertNotContains(response, "private-one@example.com")
+		admin_response = self.client.get("/")
+		self.assertEqual(len(admin_response.context["recent_votes"]), 3)
+		self.assertContains(admin_response, "private-one@example.com")
+		self.assertContains(admin_response, "private-two@example.com")
 
 	def test_dashboard_paginates_older_vote_history(self):
-		user = User.objects.create_user(username="historyviewer", password="test-pass-872!")
-		self.client.force_login(user)
+		admin = User.objects.create_superuser(
+			username="historyviewer",
+			email="history@example.com",
+			password="test-pass-872!",
+		)
+		self.client.force_login(admin)
 		Vote.objects.bulk_create([
 			Vote(email=f"archive-{index}@example.com", candidate="Candidate A")
 			for index in range(51)
@@ -132,3 +103,27 @@ class AccountFlowTests(TestCase):
 		self.assertEqual(response.json()["results"], {"Candidate A": 1, "Candidate B": 1})
 		self.assertEqual(event["votes"], {"Candidate A": 1, "Candidate B": 1})
 		self.assertEqual(event["vote"]["candidate"], "Candidate B")
+		self.assertEqual(event["vote"]["email"], "incoming@example.com")
+
+	def test_live_voter_details_are_sent_only_to_admins(self):
+		event = {
+			"votes": {"Candidate A": 1},
+			"vote": {
+				"email": "private@example.com",
+				"candidate": "Candidate A",
+				"date_created": "2026-10-01T12:00:00+00:00",
+			},
+		}
+		for user, should_include_details in (
+			(AnonymousUser(), False),
+			(User(is_staff=True), True),
+		):
+			with self.subTest(admin=should_include_details):
+				consumer = VoteConsumer2({"user": user}, None, None)
+				consumer.is_admin = user.is_authenticated and (user.is_staff or user.is_superuser)
+				consumer.send = AsyncMock()
+				async_to_sync(consumer.vote_update)(event)
+				payload = json.loads(consumer.send.call_args.kwargs["text_data"])
+				self.assertEqual("vote" in payload, should_include_details)
+				if should_include_details:
+					self.assertEqual(payload["vote"]["email"], "private@example.com")
