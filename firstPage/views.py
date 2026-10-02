@@ -1,12 +1,13 @@
 from django import forms
 from django.contrib import messages
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db.models import Count
 from django.core.paginator import Paginator
 from django.shortcuts import redirect, render # pyright: ignore[reportMissingModuleSource]
 from django.views.decorators.http import require_POST
 from .models import Vote
+
 
 class RegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -48,6 +49,7 @@ def logout_view(request):
     return redirect("account")
 
 
+@login_required
 def home(request):
     is_admin = request.user.is_authenticated and (
         request.user.is_staff or request.user.is_superuser
