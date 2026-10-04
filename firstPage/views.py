@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import messages
-from django.contrib.auth import login, logout, login_required
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db.models import Count
 from django.core.paginator import Paginator
