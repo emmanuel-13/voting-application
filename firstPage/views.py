@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.db.models import Count
 from django.core.paginator import Paginator
@@ -50,7 +49,6 @@ def logout_view(request):
     return redirect("account")
 
 
-@login_required
 def home(request):
     is_admin = request.user.is_authenticated and (
         request.user.is_staff or request.user.is_superuser
